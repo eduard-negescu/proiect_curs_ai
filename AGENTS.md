@@ -6,50 +6,50 @@ Multi-agent system for elderly bracelet monitoring, built on top of the Bracelet
 
 ```
 ┌──────────────────────────────────┐
-│           Orchestrator           │
-│  (entry point, routes requests)  │
-└──────────────┬───────────────────┘
-               │
-┌──────────────▼───────────────────┐
-│         Bracelet Agent           │
-│  (all bracelet operations)       │
-└──────────────┬───────────────────┘
-               │
-┌──────────────▼───────────────────┐
+│           Coordinator            │
+│  (CLI entry, routes queries)     │
+└──────────┬───────────┬───────────┘
+           │           │
+┌──────────▼──┐ ┌──────▼───────────┐
+│  GPS Agent  │ │   Health Agent   │
+│ (locații)   │ │ (SpO2, puls)     │
+└──────────┬──┘ └──────┬───────────┘
+           │           │
+┌──────────▼───────────▼───────────┐
 │          Bracelet API            │
 │      (FastAPI + PostgreSQL)      │
 └──────────────────────────────────┘
 ```
 
-## Tools
+## Agents
 
-The Bracelet Agent wraps all Bracelet API endpoints as tools.
+### Coordinator (`src/agents/coordinator.py`)
+CLI entry point (`python -m agents.coordinator`). Routes user queries to the appropriate agent and generates LLM responses via local Ollama.
 
-| Tool | Endpoint | Description |
-|------|----------|-------------|
-| `create_device` | `POST /device` | Register a new bracelet |
-| `list_devices` | `GET /device` | List all registered devices |
-| `record_health` | `POST /health` | Record SpO2 and heartbeat for a device |
-| `get_latest_health` | `GET /health` | Get latest health readings per device |
-| `record_gps` | `POST /gps` | Record a GPS position for a device |
-| `get_latest_gps` | `GET /gps` | Get latest GPS position per device |
+- **Responsibilities**: Query routing, LLM response generation.
+- **Route triggers**: keyword matching (e.g. "gps", "heartbeat", "spo2").
 
-## Agent
+### GPS Agent (`src/agents/gps_agent.py`)
+Handles GPS location queries and location recording.
 
-### Orchestrator (`src/agents/orchestrator.py`)
-Entry point that receives user requests, invokes the Bracelet Agent, and returns results.
+- **Tools**: `get_latest_gps`, `record_gps`
+- **Skills**: `get_device_locations`
 
-- **Responsibilities**: Request routing, response formatting.
-- **Triggers**: User messages.
+### Health Agent (`src/agents/health_agent.py`)
+Handles health monitoring queries (SpO2, heartbeat).
 
-### Bracelet Agent (`src/agents/bracelet_agent.py`)
-Handles all interactions with the Bracelet API — device management, health data, and GPS tracking.
+- **Tools**: `get_latest_health`, `record_health`
+- **Skills**: `get_highest_heartbeat`, `find_low_spo2`, `find_high_heartbeat`
 
-- **Tools**: all 6 tools listed above.
-- **Capabilities**:
-  - Register and list devices.
-  - Record and retrieve health data (SpO2, heartbeat).
-  - Record and retrieve GPS positions.
+## Running
+
+```bash
+# Start the API
+bracelet_dev
+
+# Start the CLI agent
+python -m agents.coordinator
+```
 
 ## Data Model
 
@@ -62,9 +62,22 @@ Device (1) ──┬── (many) HealthRecord
 - **Health**: device_id, sp0 (SpO2), heartbeat, created_at
 - **GPS**: device_id, latitude, longitude, created_at
 
+## Migrations
+
+Database migrations use Alembic with async SQLAlchemy.
+
+| Command | Description |
+|---------|-------------|
+| `alembic revision --autogenerate -m "message"` | Create a new migration from model changes |
+| `alembic upgrade head` | Apply pending migrations |
+| `alembic downgrade -1` | Rollback last migration |
+
+- Migration scripts live in `migrations/versions/`.
+- The database URL is read from `bracelet_api.config.settings` at runtime.
+- Import new models in `migrations/env.py` so autogenerate detects them.
+
 ## Adding a New Agent
 
-1. Create `src/agents/<name>_agent.py` with a class that exposes async methods.
-2. Register the agent in the orchestrator's agent registry.
-3. Define the tools the agent needs (wrap API calls).
-4. Add tests in `tests/agents/`.
+1. Create `src/agents/<name>_agent.py` with a class that exposes the agent's methods.
+2. Register the agent in the coordinator's routing logic.
+3. Add tests in `tests/agents/`.
