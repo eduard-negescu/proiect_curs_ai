@@ -41,6 +41,12 @@ Handles health monitoring queries (SpO2, heartbeat).
 - **Tools**: `get_latest_health`, `record_health`
 - **Skills**: `get_highest_heartbeat`, `find_low_spo2`, `find_high_heartbeat`
 
+### Discord Agent (`src/agents/discord_agent.py`)
+Sends alerts to a Discord channel via bot.
+
+- **Tools**: `send_alert`, `send_health_alerts`, `send_gps_alerts`
+- **Env**: `DISCORD_BOT_TOKEN`, `DISCORD_CHANNEL_ID`
+
 ## Running
 
 ```bash

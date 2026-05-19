@@ -15,7 +15,10 @@ async def create_health_record(body: HealthCreate, db: AsyncSession = Depends(ge
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     record = Health(
-        device_id=body.device_id, sp0=body.sp0, heartbeat=body.heartbeat
+        device_id=body.device_id,
+        sp0=body.sp0,
+        heartbeat=body.heartbeat,
+        is_moving=body.is_moving,
     )
     db.add(record)
     await db.commit()

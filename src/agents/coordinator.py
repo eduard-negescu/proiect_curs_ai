@@ -4,12 +4,13 @@ import os
 import ollama
 from dotenv import load_dotenv
 
+from agents.discord_agent import DiscordAgent
 from agents.gps_agent import GPSAgent
 from agents.health_agent import HealthAgent
 
 load_dotenv()
 
-MODEL_NAME = "gpt-oss:20b"
+MODEL_NAME = os.getenv("OLLAMA_MODEL", "gpt-oss:20b")
 OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY")
 OLLAMA_CLIENT = ollama.Client(
     host="https://ollama.com",
@@ -22,6 +23,7 @@ class Coordinator:
     def __init__(self):
         self.gps_agent = GPSAgent()
         self.health_agent = HealthAgent()
+        self.discord_agent = DiscordAgent()
 
     def route(self, query: str):
         q = query.lower()
@@ -38,6 +40,33 @@ class Coordinator:
 
         if "spo2" in q or "oxigen" in q or "saturatie" in q:
             return self.health_agent.find_low_spo2()
+
+        if "alert" in q or "notifica" in q or "discord" in q:
+            if "health" in q or "sanatate" in q or "puls" in q or "spo2" in q:
+                return {"discord": self.discord_agent.send_health_alerts()}
+            if "gps" in q or "locatie" in q:
+                return {"discord": self.discord_agent.send_gps_alerts()}
+
+            gps_data = None
+            if "dispozitiv" in q or "device" in q or "locatie" in q:
+                try:
+                    gps_data = self.gps_agent.get_device_locations()
+                except Exception:
+                    pass
+
+            if gps_data:
+                lines = "\n".join(
+                    f"Device {d['device_id']}: ({d['latitude']}, {d['longitude']})"
+                    for d in gps_data
+                )
+                alert_msg = f"**Alertă dispozitive**\n{lines}"
+            else:
+                alert_msg = "Alertă generală de la sistemul de monitorizare."
+
+            return {
+                "discord": self.discord_agent.send_alert(alert_msg),
+                "gps": gps_data,
+            }
 
         if "device" in q or "dispozitiv" in q or "bratara" in q:
             return [d["id"] for d in self._get_devices()]
@@ -89,6 +118,8 @@ def main():
     print("\n==============================")
     print(" IoT Bracelet Agent CLI")
     print("==============================\n")
+
+    print(MODEL_NAME)
 
     coordinator = Coordinator()
 
