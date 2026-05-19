@@ -34,7 +34,7 @@ class DiscordAgent:
 
     @staticmethod
     def send_health_alerts() -> str:
-        response = requests.get("http://localhost:8000/health")
+        response = requests.get("http://localhost:8001/health")
         response.raise_for_status()
         records = response.json()
 
@@ -58,7 +58,7 @@ class DiscordAgent:
 
     @staticmethod
     def send_gps_alerts() -> str:
-        response = requests.get("http://localhost:8000/gps")
+        response = requests.get("http://localhost:8001/gps")
         response.raise_for_status()
         records = response.json()
 

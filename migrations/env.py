@@ -23,7 +23,13 @@ if config.config_file_name is not None:
 from bracelet_api.config import settings
 from bracelet_api.database import Base
 
-from bracelet_api.models import Device, Health, GPS  # noqa: F401
+from bracelet_api.models import (
+    ChatConversation,
+    ChatMessage,
+    Device,
+    GPS,
+    Health,
+)  # noqa: F401
 
 target_metadata = Base.metadata
 

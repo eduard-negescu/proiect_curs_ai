@@ -6,19 +6,25 @@ Multi-agent system for elderly bracelet monitoring, built on top of the Bracelet
 
 ```
 ┌──────────────────────────────────┐
+│        Chainlit Frontend         │
+│    (Web UI, chat interface)      │
+└──────────────┬───────────────────┘
+               │
+┌──────────────▼───────────────────┐
 │           Coordinator            │
 │  (CLI entry, routes queries)     │
-└──────────┬───────────┬───────────┘
-           │           │
-┌──────────▼──┐ ┌──────▼───────────┐
-│  GPS Agent  │ │   Health Agent   │
-│ (locații)   │ │ (SpO2, puls)     │
-└──────────┬──┘ └──────┬───────────┘
-           │           │
-┌──────────▼───────────▼───────────┐
-│          Bracelet API            │
-│      (FastAPI + PostgreSQL)      │
-└──────────────────────────────────┘
+└──────┬──────────┬──────────┬─────┘
+       │          │          │
+┌──────▼──┐ ┌────▼──────┐ ┌─▼──────────┐
+│GPS Agent│ │Health     │ │Discord     │
+│(locații)│ │Agent      │ │Agent       │
+└──────┬──┘ │(SpO2,puls)│ │(alerte)    │
+       │    └────┬──────┘ └────────────┘
+       │         │
+┌──────▼─────────▼───────────┐
+│       Bracelet API         │
+│   (FastAPI + PostgreSQL)   │
+└────────────────────────────┘
 ```
 
 ## Agents
@@ -41,6 +47,13 @@ Handles health monitoring queries (SpO2, heartbeat).
 - **Tools**: `get_latest_health`, `record_health`
 - **Skills**: `get_highest_heartbeat`, `find_low_spo2`, `find_high_heartbeat`
 
+### Chainlit Agent (`src/agents/chainlit_app.py`)
+Web-based chat UI that wraps the Coordinator. Routes queries via `Coordinator.route()` and displays responses via Ollama.
+
+- **Entry**: `chainlit run src/agents/chainlit_app.py`
+- **Persistence**: Stores conversations in `chat_conversations` / `chat_messages` tables.
+- **Welcome**: Configured via `chainlit.md`.
+
 ### Discord Agent (`src/agents/discord_agent.py`)
 Sends alerts to a Discord channel via bot.
 
@@ -55,6 +68,9 @@ bracelet_dev
 
 # Start the CLI agent
 python -m agents.coordinator
+
+# Start the Chainlit frontend
+chainlit run src/agents/chainlit_app.py
 ```
 
 ## Data Model
@@ -67,6 +83,8 @@ Device (1) ──┬── (many) HealthRecord
 - **Device**: UUID, created_at
 - **Health**: device_id, sp0 (SpO2), heartbeat, created_at
 - **GPS**: device_id, latitude, longitude, created_at
+- **ChatConversation**: id (UUID), device_id (FK), created_at
+- **ChatMessage**: id, conversation_id (FK), role, content, created_at
 
 ## Migrations
 

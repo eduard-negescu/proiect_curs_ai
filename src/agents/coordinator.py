@@ -79,9 +79,12 @@ class Coordinator:
     @staticmethod
     def _get_devices() -> list[dict]:
         import requests
-        response = requests.get("http://localhost:8000/device")
-        response.raise_for_status()
-        return response.json()
+        try:
+            response = requests.get("http://localhost:8001/device", timeout=5)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException:
+            return []
 
     @staticmethod
     def generate(query: str, data) -> str:

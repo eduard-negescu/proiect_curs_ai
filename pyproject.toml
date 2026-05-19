@@ -17,11 +17,14 @@ dependencies = [
     "ollama>=0.6.0",
     "requests>=2.32.0",
     "discord>=2.3.2",
+    "chainlit>=2.11.1",
 ]
 
 [project.scripts]
 bracelet_dev = "bracelet_api.dev:run_dev"
 bracelet_agent = "agents.coordinator:main"
+chainlit = "agents.chainlit_app:main"
+
 
 [tool.uv]
 package = true
